@@ -3,7 +3,7 @@ import tkinter as tk
 import rclpy
 from rclpy.node import Node
 from threading import Thread
-from controller_error_msgs.msg import DesiredConfiguration
+from controller_error_msgs.msg import DesiredConfiguration, Gains
 import math
 import numpy as np
 import quaternion
@@ -17,10 +17,14 @@ class PoseGen(Node):
         super().__init__("PoseGenerator")
         self.root = tk.Tk()
 
-        self.root.wm_geometry("300x600")
+        self.root.wm_geometry("300x690")
+        self.root.wm_title("Pose Generator")
+        self.root.resizable(tk.FALSE, tk.FALSE)
 
         self.pub = self.create_publisher(DesiredConfiguration, 'manipulator_controller/end_effector_configuration', 10)
         self.marker_publisher = self.create_publisher(Marker, '/desired_pose', 10)
+
+        self.gain_pub = self.create_publisher(Gains, 'manipulator_controller/gains', 10)
 
         self.x = tk.StringVar()
         self.x.set("0.0")
@@ -85,7 +89,35 @@ class PoseGen(Node):
         self.button.grid(row=10, column=0, sticky="ew", columnspan=5, padx=10)
 
 
+        self.kp_p = tk.StringVar()
+        self.kp_o = tk.StringVar()
+        self.kv_p = tk.StringVar()
+        self.kv_o = tk.StringVar()
+
+        self.kp_p.set("0.0")
+        self.kp_o.set("0.0")
+        self.kv_p.set("0.0")
+        self.kv_o.set("0.0")
+
+
+        tk.Label(self.root, text="Kp_p:").grid(row=11, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.1, textvariable=self.kp_p).grid(row=11, column=1, sticky='ew', pady = 10, columnspan=4)
+
+        tk.Label(self.root, text="Kp_o:").grid(row=12, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.1, textvariable=self.kp_o).grid(row=12, column=1, sticky='ew', pady = 10, columnspan=4)
+
+        tk.Label(self.root, text="Kv_p:").grid(row=13, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.01, textvariable=self.kv_p).grid(row=13, column=1, sticky='ew', pady = 10, columnspan=4)
+
+        tk.Label(self.root, text="Kv_o:").grid(row=14, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.01, textvariable=self.kv_o).grid(row=14, column=1, sticky='ew', pady = 10, columnspan=4)
+
+        self.send_gains_butt = tk.Button(self.root, text="Send Gains", command=self.send_gains)
+        self.send_gains_butt.grid(row=15, column=0, sticky="ew", columnspan=5, padx=10)
+
+
         self.msg = DesiredConfiguration()
+        self.gains = Gains()
         self.marker = Marker()
         self.rate = self.create_rate(30)
 
@@ -113,6 +145,16 @@ class PoseGen(Node):
             self.root.update_idletasks()
             self.t += 0.0001
 
+
+    def send_gains(self):
+
+        self.gains.kp_p.data = float(self.kp_p.get())
+        self.gains.kp_o.data = float(self.kp_o.get())
+        self.gains.kv_p.data = float(self.kv_p.get())
+        self.gains.kv_o.data = float(self.kv_o.get())
+
+
+        self.gain_pub.publish(self.gains)
 
 
     def compute_circle(self):

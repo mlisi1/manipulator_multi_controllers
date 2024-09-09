@@ -30,6 +30,23 @@ void MultiController::command_callback(const std::shared_ptr<controller_error_ms
 
 
 
+void MultiController::gain_callback(const std::shared_ptr<controller_error_msgs::msg::Gains> gains) {
+
+  Kp = Eigen::MatrixXd::Identity(6, 6) * gains->kp_p.data;
+  Kv = Eigen::MatrixXd::Identity(6, 6) * gains->kv_p.data;
+  Kv_j = Eigen::MatrixXd::Identity(dofs, dofs) * gains->kv_p.data;
+
+  Kp(5, 5) = gains->kp_o.data; Kp(4, 4) = gains->kp_o.data; Kp(3, 3) = gains->kp_o.data;
+  Kv(5, 5) = gains->kv_o.data; Kv(4, 4) = gains->kv_o.data; Kv(3, 3) = gains->kv_o.data;
+
+  RCLCPP_DEBUG_STREAM(logger, "Changing gains to:" << "\nKp:\n" << Kp << "\nKv:\n" << Kv << "\nKv_j:\n" << Kv_j);
+
+}
+
+
+
+
+
 void MultiController::update_values() {
 
   //Update position and velocity
@@ -327,12 +344,19 @@ controller_interface::CallbackReturn MultiController::on_configure(const rclcpp_
 
 
   auto callback = std::bind(&MultiController::command_callback, this, std::placeholders::_1);
+  auto gains_callback = std::bind(&MultiController::gain_callback, this, std::placeholders::_1);
 
   command_subscriber_ =
     get_node()->create_subscription<controller_error_msgs::msg::DesiredConfiguration>(
               "~/end_effector_configuration", 
               rclcpp::SystemDefaultsQoS(), 
               callback);
+
+  gains_subscriber_ = 
+    get_node()->create_subscription<controller_error_msgs::msg::Gains>(
+              "~/gains", 
+              rclcpp::SystemDefaultsQoS(), 
+              gains_callback);
 
   if (description_msg == "") {
     RCLCPP_ERROR_STREAM(logger, "Robot description not received yet");  
@@ -445,7 +469,7 @@ controller_interface::CallbackReturn MultiController::on_activate(const rclcpp_l
 
 
 controller_interface::return_type MultiController::update(
-  const rclcpp::Time & time, const rclcpp::Duration & period) {
+  const rclcpp::Time & time, const rclcpp::Duration & /*period*/) {
 
   
     update_values();

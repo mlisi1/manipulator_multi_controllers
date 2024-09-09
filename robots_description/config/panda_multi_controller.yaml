@@ -37,14 +37,18 @@ manipulator_controller:
     base_link: "panda_link0"
     ee_link: "panda_link8"
 
+    description_topic: "robot_description"
+
 
     PD:
+
       Kp_p:   325.0
       Kp_o:   280.0
 
       Kv:     3.25
 
     CT:
+
       Kp_p:   460.0
       Kp_o:   720.0
 
@@ -53,43 +57,15 @@ manipulator_controller:
 
 
     B:
+    
       Kp_p: 7.7
       Kp_o: 7.4
 
       Kv: 5.0
 
-
-
-    #PD G  WORKS
-    # Kp: 325.0
-    # Kp_o: 280.0
-    # Kv: 3.25
-
-
-    #CT
-    # Kp:   460.0
-    # Kp_o: 720.0
-
-    # Kv:   3.8
-    # Kv_o: 20.5
-
-
-
-    #Backstepping
-    # Kp: 70.0
-    # Kp_o: 40.0
-
-    # Kv: 450.0
-
-
-    # Kp: 7.7
-    # Kp_o: 7.4
-
-    # Kv: 5.0
-
     
   
 
-    description_topic: "robot_description"
+    
 
 

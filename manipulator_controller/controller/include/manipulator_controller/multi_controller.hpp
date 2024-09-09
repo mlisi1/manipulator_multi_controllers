@@ -55,6 +55,7 @@
 
 #include <controller_error_msgs/msg/operational_space_error.hpp>
 #include <controller_error_msgs/msg/desired_configuration.hpp>
+#include <controller_error_msgs/msg/gains.hpp>
 
 
 
@@ -125,6 +126,7 @@ public:
 
     void description_callback(const std::shared_ptr<std_msgs::msg::String> description);
     void command_callback(const std::shared_ptr<controller_error_msgs::msg::DesiredConfiguration> msg);
+    void gain_callback(const std::shared_ptr<controller_error_msgs::msg::Gains> gains);
     void update_values();
     void publish_error(rclcpp::Time time);
     void computed_torque();
@@ -137,6 +139,8 @@ protected:
   std::vector<std::string> state_interface_types_;
 
   rclcpp::Subscription<controller_error_msgs::msg::DesiredConfiguration>::SharedPtr command_subscriber_;
+
+  rclcpp::Subscription<controller_error_msgs::msg::Gains>::SharedPtr gains_subscriber_;
   
   rclcpp::Publisher<controller_error_msgs::msg::OperationalSpaceError>::SharedPtr error_pub;
 
