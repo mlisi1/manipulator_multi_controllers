@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(manipulator_controller LANGUAGES CXX)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
-  add_compile_options(-Wall -Wextra)
+  add_compile_options(-Wall -Wextra -Wno-unused-variable -Wno-unused-parameter)
+
 endif()
 
 
@@ -27,6 +28,8 @@ set(CONTROLLER_INCLUDE_DEPENDS
   kdl_parser
   urdf
   controller_error_msgs
+  yaml-cpp
+  casadi
 )
 
 
@@ -45,7 +48,13 @@ add_library(
     ${PROJECT_NAME}
     SHARED
     controller/multi_controller.cpp
+    controller/panda_gen.cpp
+    controller/thunder_panda.cpp
 )
+
+
+
+  
 
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
@@ -62,6 +71,9 @@ ament_target_dependencies(
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE "MANIPULATOR_CONTROLLER_BUILDING_DLL")
 
+target_link_libraries(${PROJECT_NAME} PUBLIC yaml-cpp casadi)
+
+
 pluginlib_export_plugin_description_file(controller_interface ${PROJECT_NAME}.xml)
 
 
@@ -69,6 +81,12 @@ install(
   DIRECTORY controller/include/
   DESTINATION include/
 )
+
+install(
+  DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 
 
 install(

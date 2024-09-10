@@ -57,6 +57,7 @@
 #include <controller_error_msgs/msg/desired_configuration.hpp>
 #include <controller_error_msgs/msg/gains.hpp>
 
+#include <panda_generated/thunder_panda.h>
 
 
 namespace manipulator_controller
@@ -66,13 +67,15 @@ enum class ControlMode {
     CT,
     B,
     PD,
+    AB,
 };
 
 
 const std::unordered_map<std::string, ControlMode> stringToControlMode = {
     {"CT", ControlMode::CT},
     {"B", ControlMode::B},
-    {"PD", ControlMode::PD}
+    {"PD", ControlMode::PD},
+    {"AB", ControlMode::AB}
 };
 
 
@@ -131,6 +134,7 @@ public:
     void publish_error(rclcpp::Time time);
     void computed_torque();
     void backstepping();
+    void adaptive_backstepping();
 
 protected:
 
@@ -147,6 +151,8 @@ protected:
   bool new_msg_ = false;
   bool new_single_msg_ = false;
   rclcpp::Time start_time_;
+
+  thunder_panda robot;
 
   trajectory_msgs::msg::JointTrajectoryPoint point_interp_;
 
@@ -183,20 +189,21 @@ public:
 
 private:
 
-  double Kp_p, Kp_o, Kv_p, Kv_o;
+  double Kp_p, Kp_o, Kv_p, Kv_o, r;
 
   urdf::Model model;
   KDL::Tree tree;
   KDL::Chain chain;
   int dofs;
 
-  Eigen::MatrixXd Kp, Kv, Kv_j;
+  Eigen::MatrixXd Kp, Kv, Kv_j, R;
 
 
   std::string description_topic, description_msg;
   std::string controller_type;
   std::string base_link, ee_link;
 
+  
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr robot_description_subscriber;
   
 
@@ -225,7 +232,8 @@ private:
   Eigen::MatrixXd M_xi;
   Eigen::VectorXd h_xi;
 
-  KDL::JntArray q_ref;
+  KDL::JntArray q_dot_ref;
+  Eigen::VectorXd q_ddot_ref;
   Eigen::VectorXd s;
 
 
@@ -254,6 +262,11 @@ private:
 
   KDL::Frame ee_fk_frame;
 
+
+	Eigen::VectorXd params;
+  std::string yaml_file;
+  Eigen::MatrixXd Yr;
+  Eigen::VectorXd pi_hat;
 
 
 

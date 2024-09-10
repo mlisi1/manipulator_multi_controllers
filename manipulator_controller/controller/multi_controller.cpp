@@ -124,10 +124,34 @@ void MultiController::computed_torque() {
 
 void MultiController::backstepping() {
 
-  q_ref.data = J.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_dot_desired + Kp * err);
+  q_dot_ref.data = J.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_dot_desired + Kp * err);
   s = J.data.completeOrthogonalDecomposition().pseudoInverse() * (err_dot + Kp * err);
 
-  param_solver->JntToCoriolis(q, q_ref, C_backstepping);
+  param_solver->JntToCoriolis(q, q_dot_ref, C_backstepping);
+
+}
+
+
+
+void MultiController::adaptive_backstepping() {
+
+  backstepping();
+
+  KDL::JntArrayVel jnt_q_qdot;
+  jnt_q_qdot.q = q;
+  jnt_q_qdot.qdot = q_dot;
+  jac_dot_solver->JntToJacDot(jnt_q_qdot, dJ);
+
+
+  q_ddot_ref = J.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_ddot_desired + Kp * err_dot);
+  q_ddot_ref += dJ.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_dot + Kp * err);
+
+
+  robot.setArguments(q.data, q_dot.data, q_dot_ref.data, q_ddot_ref);
+  Yr = robot.get_Yr();
+  
+  pi_hat = R.inverse() * Yr.transpose() * s;
+
 
 }
 
@@ -177,7 +201,7 @@ controller_interface::CallbackReturn MultiController::on_init()
 
   controller_type = auto_declare<std::string>("controller_type", "");
 
-  if (controller_type != "PD" && controller_type != "B" && controller_type != "CT") {
+  if (controller_type != "PD" && controller_type != "B" && controller_type != "CT" && controller_type != "AB") {
 
     RCLCPP_ERROR_STREAM(logger, "Controller type not recognized: " << controller_type);
     return CallbackReturn::ERROR;
@@ -207,6 +231,15 @@ controller_interface::CallbackReturn MultiController::on_init()
       Kp_o = auto_declare<double>("CT.Kp_o", 0.0);
       Kv_p = auto_declare<double>("CT.Kv_p", 0.0);
       Kv_o = auto_declare<double>("CT.Kv_0", 0.0);
+      break;
+
+    case ControlMode::AB:
+
+      Kp_p = auto_declare<double>("AB.Kp_p", 0.0);
+      Kp_o = auto_declare<double>("AB.Kp_o", 0.0);
+      Kv_p = auto_declare<double>("AB.Kv", 0.0);
+      r = auto_declare<double>("AB.r", 0.0);
+      yaml_file = auto_declare<std::string>("yaml_file", "");
       break;
 
   }
@@ -278,7 +311,7 @@ controller_interface::CallbackReturn MultiController::on_init()
                       desired_twist.angular.y,
                       desired_twist.angular.z;
 
-
+  xi_ddot_desired = Eigen::VectorXd::Zero(6);
 
 
   //Allow for robot description to be published
@@ -376,6 +409,7 @@ controller_interface::CallbackReturn MultiController::on_configure(const rclcpp_
   Kp(5, 5) = Kp_o; Kp(4, 4) = Kp_o; Kp(3, 3) = Kp_o;
   Kv(5, 5) = Kv_o; Kv(4, 4) = Kv_o; Kv(3, 3) = Kv_o;
 
+  
   switch (stringToControlMode.find(controller_type)->second) {
 
     case ControlMode::PD:
@@ -397,7 +431,15 @@ controller_interface::CallbackReturn MultiController::on_configure(const rclcpp_
       RCLCPP_INFO_STREAM(logger, "Kv\n:" << Kv);
       break;
 
+    case ControlMode::AB:
+
+      RCLCPP_INFO_STREAM(logger, "Kp\n:" << Kp);
+      RCLCPP_INFO_STREAM(logger, "Kv\n:" << Kv_j);
+      RCLCPP_INFO_STREAM(logger, "r\n:" << r);
+      break;
+
   }
+  
 
 
   fk_solver =  std::make_shared<KDL::ChainFkSolverPos_recursive>(chain);
@@ -409,7 +451,8 @@ controller_interface::CallbackReturn MultiController::on_configure(const rclcpp_
   q_dot.resize(dofs);
   torque.resize(dofs);
 
-  q_ref.resize(dofs);
+  q_dot_ref.resize(dofs);
+  q_ddot_ref.resize(dofs);
 
   M.resize(dofs);
   C.resize(dofs);
@@ -418,6 +461,17 @@ controller_interface::CallbackReturn MultiController::on_configure(const rclcpp_
 
   J.resize(dofs);
   dJ.resize(dofs);
+
+
+  robot.setArguments(q.data, q_dot.data, q_dot_ref.data, q_ddot_ref);
+  robot.set_inertial_REG(params);
+
+  robot.load_inertial_REG(yaml_file);
+
+  Yr = robot.get_Yr();
+
+  R = Eigen::MatrixXd::Identity(Yr.cols(), Yr.cols()) * r;
+  
 
   RCLCPP_INFO_STREAM(logger, "Configuration complete");
   return CallbackReturn::SUCCESS;
@@ -504,6 +558,15 @@ controller_interface::return_type MultiController::update(
         computed_torque();
         torque = J.data.transpose() * (M_xi * (xi_ddot_desired + Kv * err_dot + Kp * err) + h_xi);
         RCLCPP_DEBUG_STREAM(logger, "Torque: " << torque.transpose());
+        break;
+
+      case ControlMode::AB:
+
+        adaptive_backstepping();        
+        
+        torque = Yr * pi_hat + Kv_j * s + J.data.transpose() * err;
+
+        RCLCPP_DEBUG_STREAM(logger, "Torque:\n " << torque.transpose());        
         break;
 
 

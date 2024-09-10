@@ -32,7 +32,7 @@ manipulator_controller:
       - velocity
       - effort
 
-    controller_type: "B"
+    controller_type: "AB"
 
     base_link: "panda_link0"
     ee_link: "panda_link8"
@@ -58,10 +58,21 @@ manipulator_controller:
 
     B:
     
-      Kp_p: 7.7
-      Kp_o: 7.4
+      Kp_p:   7.7
+      Kp_o:   7.4
 
-      Kv: 5.0
+      Kv:     5.0
+
+
+    AB:
+      
+      Kp_p:   7.7
+      Kp_o:   7.4
+
+      Kv:     5.0
+
+      r:      0.5
+      yaml_path: 'config/panda_inertial_REG.yaml'
 
     
   
