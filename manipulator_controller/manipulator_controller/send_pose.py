@@ -27,13 +27,13 @@ class PoseGen(Node):
         self.gain_pub = self.create_publisher(Gains, 'manipulator_controller/gains', 10)
 
         self.x = tk.StringVar()
-        self.x.set("0.0")
+        self.x.set("0.088")
 
         self.y = tk.StringVar()
         self.y.set("0.0")
 
         self.z = tk.StringVar()
-        self.z.set("0.0")
+        self.z.set("0.9")
 
         self.yaw = tk.StringVar()
         self.yaw.set("0.0")
@@ -42,7 +42,7 @@ class PoseGen(Node):
         self.pitch.set("0.0")
 
         self.roll = tk.StringVar()
-        self.roll.set("0.0")
+        self.roll.set("180")
 
         tk.Label(self.root, text="X:").grid(row=0, column=0)
         tk.Spinbox(self.root, from_ = -100.0, to = 100.0, increment=0.01, textvariable=self.x).grid(row=0, column=1, sticky='ew', pady = 10, columnspan=4)
@@ -193,7 +193,7 @@ class PoseGen(Node):
             vz = float(self.time_scale.get()) * float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             vy = 0.0
 
-            if self.spiral:
+            if self.spiral.get():
 
                 y = float(self.y.get()) + float(self.radius.get()) * math.sin((float(self.time_scale.get()) * self.t)/np.pi)
                 vy = float(self.time_scale.get()) * float(self.radius.get()) * math.cos((float(self.time_scale.get()) * self.t)/np.pi) / np.pi
@@ -208,7 +208,7 @@ class PoseGen(Node):
             vz =   float(self.time_scale.get()) * float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             vx = 0.0
 
-            if self.spiral:
+            if self.spiral.get():
 
                 x = float(self.x.get()) + float(self.radius.get()) * math.sin((float(self.time_scale.get()) * self.t)/np.pi)
                 vx = float(self.time_scale.get()) * float(self.radius.get()) * math.cos((float(self.time_scale.get()) * self.t)/np.pi) / np.pi
