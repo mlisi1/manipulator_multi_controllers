@@ -21,6 +21,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/OperationalSpaceError.msg"
   "msg/DesiredConfiguration.msg"
   "msg/Gains.msg"
+  "msg/RegressorStats.msg"
   DEPENDENCIES geometry_msgs builtin_interfaces std_msgs
 )
 

@@ -1,5 +1,5 @@
-#include "panda_generated/thunder_panda.h"
-#include "panda_generated/panda_gen.h"
+#include "thunder_generated/thunder_panda.h"
+#include "thunder_generated/panda_gen.h"
 
 thunder_panda::thunder_panda(){
 	n_joints = 7;

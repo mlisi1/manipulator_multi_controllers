@@ -52,12 +52,12 @@
 #include <kdl/chaindynparam.hpp>
 #include <kdl/chainjnttojacdotsolver.hpp>
 
-
 #include <controller_error_msgs/msg/operational_space_error.hpp>
 #include <controller_error_msgs/msg/desired_configuration.hpp>
 #include <controller_error_msgs/msg/gains.hpp>
+#include <controller_error_msgs/msg/regressor_stats.hpp>
 
-#include <panda_generated/thunder_panda.h>
+#include <thunder_generated/thunder_panda.h>
 
 
 namespace manipulator_controller
@@ -134,7 +134,7 @@ public:
     void publish_error(rclcpp::Time time);
     void computed_torque();
     void backstepping();
-    void adaptive_backstepping();
+    void adaptive_backstepping(const rclcpp::Duration & period);
 
 protected:
 
@@ -148,6 +148,8 @@ protected:
   
   rclcpp::Publisher<controller_error_msgs::msg::OperationalSpaceError>::SharedPtr error_pub;
 
+  rclcpp::Publisher<controller_error_msgs::msg::RegressorStats>::SharedPtr reg_pub;
+
   bool new_msg_ = false;
   bool new_single_msg_ = false;
   rclcpp::Time start_time_;
@@ -155,6 +157,8 @@ protected:
   thunder_panda robot;
 
   trajectory_msgs::msg::JointTrajectoryPoint point_interp_;
+
+  controller_error_msgs::msg::RegressorStats reg_msg;
 
   std::vector<std::reference_wrapper<hardware_interface::LoanedCommandInterface>>
     joint_position_command_interface_;
@@ -189,7 +193,7 @@ public:
 
 private:
 
-  double Kp_p, Kp_o, Kv_p, Kv_o, r;
+  double Kp_p, Kp_o, Kv_p, Kv_o, r, lambda;
 
   urdf::Model model;
   KDL::Tree tree;
@@ -267,6 +271,8 @@ private:
   std::string yaml_file;
   Eigen::MatrixXd Yr;
   Eigen::VectorXd pi_hat;
+  Eigen::VectorXd pi_hat_dot;
+  Eigen::VectorXd real_values;
 
 
 

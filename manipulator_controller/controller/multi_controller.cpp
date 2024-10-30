@@ -61,6 +61,7 @@ void MultiController::update_values() {
 
   }   
 
+
   //Update robot matrices
   param_solver->JntToMass(q, M);
   param_solver->JntToCoriolis(q, q_dot, C);
@@ -83,8 +84,6 @@ void MultiController::update_values() {
               desired_twist.angular.z;
 
   xi_desired.head<3>() << desired_pose.position.x, desired_pose.position.y, desired_pose.position.z;
-  // Eigen::Vector3d desired_euler = attitude_desired.toRotationMatrix().eulerAngles(2, 1, 0);
-  // xi_desired.tail<3>() << desired_euler[2], desired_euler[1], desired_euler[0];
 
   jac_solver->JntToJac(q, J);
 
@@ -124,34 +123,53 @@ void MultiController::computed_torque() {
 
 void MultiController::backstepping() {
 
-  q_dot_ref.data = J.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_dot_desired + Kp * err);
-  s = J.data.completeOrthogonalDecomposition().pseudoInverse() * (err_dot + Kp * err);
-
-  param_solver->JntToCoriolis(q, q_dot_ref, C_backstepping);
-
-}
-
-
-
-void MultiController::adaptive_backstepping() {
-
-  backstepping();
-
   KDL::JntArrayVel jnt_q_qdot;
   jnt_q_qdot.q = q;
   jnt_q_qdot.qdot = q_dot;
   jac_dot_solver->JntToJacDot(jnt_q_qdot, dJ);
 
+  q_dot_ref.data = J.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_dot_desired + Kp * err);
+  s = J.data.completeOrthogonalDecomposition().pseudoInverse() * (err_dot + Kp * err);
 
   q_ddot_ref = J.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_ddot_desired + Kp * err_dot);
-  q_ddot_ref += dJ.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_dot + Kp * err);
+  q_ddot_ref += dJ.data.completeOrthogonalDecomposition().pseudoInverse() * (xi_dot_desired + Kp * err);
+
+  param_solver->JntToCoriolis(q, q_dot_ref, C_backstepping);
 
 
-  robot.setArguments(q.data, q_dot.data, q_dot_ref.data, q_ddot_ref);
+}
+
+
+
+void MultiController::adaptive_backstepping(const rclcpp::Duration & period) {
+
+  backstepping();
+
+  double dt = period.seconds();
+
+  robot.setArguments(q.data, q_dot.data, q_dot_ref.data, q_ddot_ref);  
+ 
   Yr = robot.get_Yr();
   
-  pi_hat = R.inverse() * Yr.transpose() * s;
+  pi_hat_dot = R.inverse() * Yr.transpose() * s;  
 
+  pi_hat += pi_hat_dot * dt;
+
+  for (int i=0; i<real_values.size(); i++) {
+
+    if (i % 10 == 0) {
+      continue;
+    }
+
+    pi_hat[i] = real_values[i];
+
+  }
+
+  for (int i=0; i<pi_hat.size(); i++) {
+
+    reg_msg.estimated_values.data[i] = pi_hat[i];
+
+  }
 
 }
 
@@ -223,6 +241,7 @@ controller_interface::CallbackReturn MultiController::on_init()
       Kp_p = auto_declare<double>("B.Kp_p", 0.0);
       Kp_o = auto_declare<double>("B.Kp_o", 0.0);
       Kv_p = auto_declare<double>("B.Kv", 0.0);
+      lambda = auto_declare<double>("B.lambda", 0.0);
       break;
 
     case ControlMode::CT:
@@ -230,7 +249,8 @@ controller_interface::CallbackReturn MultiController::on_init()
       Kp_p = auto_declare<double>("CT.Kp_p", 0.0);
       Kp_o = auto_declare<double>("CT.Kp_o", 0.0);
       Kv_p = auto_declare<double>("CT.Kv_p", 0.0);
-      Kv_o = auto_declare<double>("CT.Kv_0", 0.0);
+      Kv_o = auto_declare<double>("CT.Kv_o", 0.0);
+      lambda = auto_declare<double>("CT.lambda", 0.0);
       break;
 
     case ControlMode::AB:
@@ -239,6 +259,7 @@ controller_interface::CallbackReturn MultiController::on_init()
       Kp_o = auto_declare<double>("AB.Kp_o", 0.0);
       Kv_p = auto_declare<double>("AB.Kv", 0.0);
       r = auto_declare<double>("AB.r", 0.0);
+      lambda = auto_declare<double>("B.lambda", 0.0);
       yaml_file = auto_declare<std::string>("yaml_file", "");
       break;
 
@@ -257,6 +278,7 @@ controller_interface::CallbackReturn MultiController::on_init()
 
 
   error_pub = get_node()->create_publisher<controller_error_msgs::msg::OperationalSpaceError>("~/error", 10);
+  reg_pub = get_node()->create_publisher<controller_error_msgs::msg::RegressorStats>("~/regressor", 10);
 
   if (description_topic == "") {
     RCLCPP_ERROR_STREAM(logger, "Robot description topic is empty");
@@ -462,10 +484,49 @@ controller_interface::CallbackReturn MultiController::on_configure(const rclcpp_
   J.resize(dofs);
   dJ.resize(dofs);
 
+  reg_msg.estimated_values.data.resize(dofs*10);
+  reg_msg.real_values.data.resize(dofs*10);
+  reg_msg.torque_error.data.resize(dofs);
+
+  std::vector<urdf::InertialSharedPtr> inertial;
+
+  for (const auto& link_pair : model.links_) {
+      const auto& link = link_pair.second;
+
+      // Check if the link has inertial parameters
+      if (link->inertial) {
+
+          inertial.emplace_back(link->inertial);  
+      } 
+  }
+
+  pi_hat = Eigen::VectorXd::Zero(dofs*10);
+  real_values = Eigen::VectorXd::Zero(dofs*10);
+
+
+  int offset = inertial.size();
+
+  for (int i=0; i<inertial.size()-1; i++) {
+
+      reg_msg.real_values.data[10 * i] = inertial[i+1]->mass;
+      reg_msg.real_values.data[10 * i + 1] = inertial[i+1]->origin.position.x;
+      reg_msg.real_values.data[10 * i + 2] = inertial[i+1]->origin.position.y;
+      reg_msg.real_values.data[10 * i + 3] = inertial[i+1]->origin.position.z;
+      reg_msg.real_values.data[10 * i + 4] = inertial[i+1]->ixx;
+      reg_msg.real_values.data[10 * i + 5] = inertial[i+1]->ixy;
+      reg_msg.real_values.data[10 * i + 6] = inertial[i+1]->ixz;
+      reg_msg.real_values.data[10 * i + 7] = inertial[i+1]->iyy;
+      reg_msg.real_values.data[10 * i + 8] = inertial[i+1]->iyz;
+      reg_msg.real_values.data[10 * i + 9] = inertial[i+1]->izz;      
+
+  }
+
+  for (int i=0; i<reg_msg.real_values.data.size(); i++) {
+
+      real_values(i) = reg_msg.real_values.data[i];
+  }
 
   robot.setArguments(q.data, q_dot.data, q_dot_ref.data, q_ddot_ref);
-  robot.set_inertial_REG(params);
-
   robot.load_inertial_REG(yaml_file);
 
   Yr = robot.get_Yr();
@@ -523,7 +584,7 @@ controller_interface::CallbackReturn MultiController::on_activate(const rclcpp_l
 
 
 controller_interface::return_type MultiController::update(
-  const rclcpp::Time & time, const rclcpp::Duration & /*period*/) {
+  const rclcpp::Time & time, const rclcpp::Duration & period) {
 
   
     update_values();
@@ -549,7 +610,8 @@ controller_interface::return_type MultiController::update(
       case ControlMode::B:
 
         backstepping();
-        torque = C_backstepping.data + G.data + Kv_j * s + J.data.transpose() * err;
+        torque = M.data * q_ddot_ref + C_backstepping.data + G.data + Kv_j * s + J.data.transpose() * err;
+        torque += (Eigen::MatrixXd::Identity(dofs, dofs) - J.data.transpose() * J.data.completeOrthogonalDecomposition().pseudoInverse().transpose()) * (-lambda * q_dot.data);
         RCLCPP_DEBUG_STREAM(logger, "Torque: " << torque.transpose());
         break;
 
@@ -557,14 +619,29 @@ controller_interface::return_type MultiController::update(
 
         computed_torque();
         torque = J.data.transpose() * (M_xi * (xi_ddot_desired + Kv * err_dot + Kp * err) + h_xi);
+
+        torque += (Eigen::MatrixXd::Identity(dofs, dofs) - J.data.transpose() * J.data.completeOrthogonalDecomposition().pseudoInverse().transpose()) * (-lambda * q_dot.data);
+
         RCLCPP_DEBUG_STREAM(logger, "Torque: " << torque.transpose());
         break;
 
       case ControlMode::AB:
 
-        adaptive_backstepping();        
+        adaptive_backstepping(period);        
         
         torque = Yr * pi_hat + Kv_j * s + J.data.transpose() * err;
+
+        Eigen::VectorXd torque_error = Yr * real_values - Yr * pi_hat;
+
+        for (int i=0; i<dofs; i++) {
+
+          reg_msg.torque_error.data[i] = torque_error[i];
+        }
+
+        torque += (Eigen::MatrixXd::Identity(dofs, dofs) - J.data.transpose() * J.data.completeOrthogonalDecomposition().pseudoInverse().transpose()) * (-lambda * q_dot.data);
+
+        reg_msg.stamp = time;
+        reg_pub->publish(reg_msg);
 
         RCLCPP_DEBUG_STREAM(logger, "Torque:\n " << torque.transpose());        
         break;

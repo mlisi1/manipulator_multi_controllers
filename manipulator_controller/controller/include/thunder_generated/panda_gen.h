@@ -243,7 +243,7 @@ extern "C" int J_7_fun_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casadi
 #define J_7_fun_SZ_ARG 1
 #define J_7_fun_SZ_RES 1
 #define J_7_fun_SZ_IW 0
-#define J_7_fun_SZ_W 51
+#define J_7_fun_SZ_W 58
 extern "C" int J_cm_0_fun(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem);
 extern "C" int J_cm_0_fun_alloc_mem(void);
 extern "C" int J_cm_0_fun_init_mem(int mem);
@@ -411,7 +411,7 @@ extern "C" int J_ee_fun_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, casad
 #define J_ee_fun_SZ_ARG 1
 #define J_ee_fun_SZ_RES 1
 #define J_ee_fun_SZ_IW 0
-#define J_ee_fun_SZ_W 51
+#define J_ee_fun_SZ_W 58
 extern "C" int J_ee_dot_fun(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem);
 extern "C" int J_ee_dot_fun_alloc_mem(void);
 extern "C" int J_ee_dot_fun_init_mem(int mem);
@@ -432,7 +432,7 @@ extern "C" int J_ee_dot_fun_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, c
 #define J_ee_dot_fun_SZ_ARG 2
 #define J_ee_dot_fun_SZ_RES 1
 #define J_ee_dot_fun_SZ_IW 0
-#define J_ee_dot_fun_SZ_W 91
+#define J_ee_dot_fun_SZ_W 117
 extern "C" int J_ee_pinv_fun(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem);
 extern "C" int J_ee_pinv_fun_alloc_mem(void);
 extern "C" int J_ee_pinv_fun_init_mem(int mem);
@@ -453,7 +453,7 @@ extern "C" int J_ee_pinv_fun_work_bytes(casadi_int *sz_arg, casadi_int* sz_res, 
 #define J_ee_pinv_fun_SZ_ARG 1
 #define J_ee_pinv_fun_SZ_RES 1
 #define J_ee_pinv_fun_SZ_IW 0
-#define J_ee_pinv_fun_SZ_W 94
+#define J_ee_pinv_fun_SZ_W 98
 extern "C" int M_fun(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem);
 extern "C" int M_fun_alloc_mem(void);
 extern "C" int M_fun_init_mem(int mem);

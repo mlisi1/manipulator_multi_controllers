@@ -21,8 +21,6 @@ manipulator_controller:
       - panda_joint5
       - panda_joint6
       - panda_joint7
-      # - panda_finger_joint1
-      # - panda_finger_joint2
 
     command_interfaces:
       - effort
@@ -52,27 +50,34 @@ manipulator_controller:
       Kp_p:   460.0
       Kp_o:   720.0
 
-      Kv_p:   3.8
+      Kv_p:   6.8
       Kv_o:   20.5
 
+      lambda: 3.7
 
     B:
     
-      Kp_p:   7.7
-      Kp_o:   7.4
+      Kp_p:   27.7
+      Kp_o:   198.4
 
-      Kv:     5.0
+      Kv:     50.0
+
+      lambda: 5.7
 
 
     AB:
       
-      Kp_p:   7.7
-      Kp_o:   7.4
+      Kp_p:   27.7
+      Kp_o:   198.4
 
-      Kv:     5.0
+      Kv:     50.0
 
-      r:      0.5
+      r:      900.0
+
+      lambda: 5.7
+
       yaml_path: 'config/panda_inertial_REG.yaml'
+
 
     
   
