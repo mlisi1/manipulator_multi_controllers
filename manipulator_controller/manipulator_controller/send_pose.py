@@ -17,7 +17,7 @@ class PoseGen(Node):
         super().__init__("PoseGenerator")
         self.root = tk.Tk()
 
-        self.root.wm_geometry("300x690")
+        self.root.wm_geometry("300x730")
         self.root.wm_title("Pose Generator")
         self.root.resizable(tk.FALSE, tk.FALSE)
 
@@ -73,20 +73,29 @@ class PoseGen(Node):
         self.radius = tk.StringVar()
         self.radius.set("0.2")
 
+
+        
+
         self.rotate = tk.IntVar()
 
         tk.Checkbutton(self.root, text="Rotate Z", variable=self.rotate).grid(row=7, column=0, sticky='ew', pady = 10, columnspan=4)
 
         tk.Label(self.root, text="Circle Radius:").grid(row=8, column=0)
         tk.Spinbox(self.root, from_ = 0.0, to = 1.0, increment=0.01, textvariable=self.radius).grid(row=8, column=1, sticky='ew', pady = 10, columnspan=4)
+
+        self.time_scale = tk.StringVar()
+        self.time_scale.set("1.0")
+
+        tk.Label(self.root, text="Time Scale:").grid(row=9, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 5.0, increment=0.1, textvariable=self.time_scale).grid(row=9, column=1, sticky='ew', pady = 10, columnspan=4)
         
      
 
         self.button = tk.Button(self.root, text="Send", command=self.send)
-        self.button.grid(row=9, column=0, sticky="ew", columnspan=5, padx=10)
+        self.button.grid(row=10, column=0, sticky="ew", columnspan=5, padx=10)
 
         self.button = tk.Button(self.root, text="Toggle Circle", command=self.toggle_circle)
-        self.button.grid(row=10, column=0, sticky="ew", columnspan=5, padx=10)
+        self.button.grid(row=11, column=0, sticky="ew", columnspan=5, padx=10)
 
 
         self.kp_p = tk.StringVar()
@@ -100,20 +109,20 @@ class PoseGen(Node):
         self.kv_o.set("0.0")
 
 
-        tk.Label(self.root, text="Kp_p:").grid(row=11, column=0)
-        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.1, textvariable=self.kp_p).grid(row=11, column=1, sticky='ew', pady = 10, columnspan=4)
+        tk.Label(self.root, text="Kp_p:").grid(row=12, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.1, textvariable=self.kp_p).grid(row=12, column=1, sticky='ew', pady = 10, columnspan=4)
 
-        tk.Label(self.root, text="Kp_o:").grid(row=12, column=0)
-        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.1, textvariable=self.kp_o).grid(row=12, column=1, sticky='ew', pady = 10, columnspan=4)
+        tk.Label(self.root, text="Kp_o:").grid(row=13, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.1, textvariable=self.kp_o).grid(row=13, column=1, sticky='ew', pady = 10, columnspan=4)
 
-        tk.Label(self.root, text="Kv_p:").grid(row=13, column=0)
-        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.01, textvariable=self.kv_p).grid(row=13, column=1, sticky='ew', pady = 10, columnspan=4)
+        tk.Label(self.root, text="Kv_p:").grid(row=14, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.01, textvariable=self.kv_p).grid(row=14, column=1, sticky='ew', pady = 10, columnspan=4)
 
-        tk.Label(self.root, text="Kv_o:").grid(row=14, column=0)
-        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.01, textvariable=self.kv_o).grid(row=14, column=1, sticky='ew', pady = 10, columnspan=4)
+        tk.Label(self.root, text="Kv_o:").grid(row=15, column=0)
+        tk.Spinbox(self.root, from_ = 0.0, to = 1000.0, increment=0.01, textvariable=self.kv_o).grid(row=15, column=1, sticky='ew', pady = 10, columnspan=4)
 
         self.send_gains_butt = tk.Button(self.root, text="Send Gains", command=self.send_gains)
-        self.send_gains_butt.grid(row=15, column=0, sticky="ew", columnspan=5, padx=10)
+        self.send_gains_butt.grid(row=16, column=0, sticky="ew", columnspan=5, padx=10)
 
 
         self.msg = DesiredConfiguration()
@@ -170,7 +179,7 @@ class PoseGen(Node):
 
         if self.rotate.get():
 
-            new_q = q * quaternion.from_rotation_vector(np.array([0, 0, 1]) * math.radians(30.0 * self.t))
+            new_q = q * quaternion.from_rotation_vector(np.array([0, 0, 1]) * math.radians(float(self.time_scale.get()) * self.t))
 
             self.msg.pose.orientation.x = new_q.x
             self.msg.pose.orientation.y = new_q.y
@@ -189,32 +198,32 @@ class PoseGen(Node):
 
         if self.plane.get() == 0:
 
-            x = float(self.x.get()) + float(self.radius.get()) * math.cos(self.t)
-            z = float(self.z.get()) + float(self.radius.get()) * math.sin(self.t)
+            x = float(self.x.get()) + float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
+            z = float(self.z.get()) + float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
             y = float(self.y.get())
 
-            vx = - float(self.radius.get()) * math.sin(self.t)
-            vz = float(self.radius.get()) * math.cos(self.t)
+            vx = - float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
+            vz = float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             vy = 0.0
 
         elif self.plane.get() == 1:
 
-            y = float(self.y.get()) + float(self.radius.get()) * math.cos(self.t)
-            z = float(self.z.get()) + float(self.radius.get()) * math.sin(self.t)
+            y = float(self.y.get()) + float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
+            z = float(self.z.get()) + float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
             x = float(self.x.get())
 
-            vy = - float(self.radius.get()) * math.sin(self.t)
-            vz = float(self.radius.get()) * math.cos(self.t)
+            vy = -  float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
+            vz =    float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             vx = 0.0
 
         elif self.plane.get() == 2:
 
-            x = float(self.x.get()) + float(self.radius.get()) * math.cos(self.t)
-            y = float(self.y.get()) + float(self.radius.get()) * math.sin(self.t)
+            x = float(self.x.get()) + float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
+            y = float(self.y.get()) + float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
             z = float(self.z.get())
 
-            vx = - float(self.radius.get()) * math.sin(self.t)
-            vy = float(self.radius.get()) * math.cos(self.t)
+            vx = - float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
+            vy = float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             vz = 0.0
 
 
