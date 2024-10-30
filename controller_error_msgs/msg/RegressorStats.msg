@@ -1,0 +1,4 @@
+builtin_interfaces/Time stamp
+std_msgs/Float32MultiArray estimated_values
+std_msgs/Float32MultiArray real_values
+std_msgs/Float32MultiArray torque_error
