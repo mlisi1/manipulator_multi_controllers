@@ -24,3 +24,5 @@ robots_description/robots/reactor/meshes/wrist_1_hull.STL
 robots_description/robots/reactor/meshes/wrist_1.STL
 robots_description/robots/reactor/meshes/wrist_2_hull.STL
 robots_description/robots/reactor/meshes/wrist_2.STL
+manipulator_controller/config/franka_2_inertial_REG.yaml
+robots_description/robots/franka_panda/panda/test_mat.urdf

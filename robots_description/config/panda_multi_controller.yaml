@@ -30,7 +30,7 @@ manipulator_controller:
       - velocity
       - effort
 
-    controller_type: "AB"
+    controller_type: "CT"
 
     base_link: "panda_link0"
     ee_link: "panda_link8"

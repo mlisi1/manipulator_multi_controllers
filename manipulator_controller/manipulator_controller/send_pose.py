@@ -76,9 +76,9 @@ class PoseGen(Node):
 
         
 
-        self.rotate = tk.IntVar()
+        self.spiral = tk.IntVar()
 
-        tk.Checkbutton(self.root, text="Rotate Z", variable=self.rotate).grid(row=7, column=0, sticky='ew', pady = 10, columnspan=4)
+        tk.Checkbutton(self.root, text="Spiral", variable=self.spiral).grid(row=7, column=0, sticky='ew', pady = 10, columnspan=4)
 
         tk.Label(self.root, text="Circle Radius:").grid(row=8, column=0)
         tk.Spinbox(self.root, from_ = 0.0, to = 1.0, increment=0.01, textvariable=self.radius).grid(row=8, column=1, sticky='ew', pady = 10, columnspan=4)
@@ -175,25 +175,12 @@ class PoseGen(Node):
     
         # Combine the rotations
         q = qz * qy * qx
+  
 
-
-        if self.rotate.get():
-
-            new_q = q * quaternion.from_rotation_vector(np.array([0, 0, 1]) * math.radians(float(self.time_scale.get()) * self.t))
-
-            self.msg.pose.orientation.x = new_q.x
-            self.msg.pose.orientation.y = new_q.y
-            self.msg.pose.orientation.z = new_q.z
-            self.msg.pose.orientation.w = new_q.w
-
-            self.msg.twist.angular.z = 30.0
-
-        else:
-
-            self.msg.pose.orientation.x = q.x
-            self.msg.pose.orientation.y = q.y
-            self.msg.pose.orientation.z = q.z
-            self.msg.pose.orientation.w = q.w
+        self.msg.pose.orientation.x = q.x
+        self.msg.pose.orientation.y = q.y
+        self.msg.pose.orientation.z = q.z
+        self.msg.pose.orientation.w = q.w
 
 
         if self.plane.get() == 0:
@@ -202,9 +189,14 @@ class PoseGen(Node):
             z = float(self.z.get()) + float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
             y = float(self.y.get())
 
-            vx = - float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
-            vz = float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
+            vx = - float(self.time_scale.get()) * float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
+            vz = float(self.time_scale.get()) * float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             vy = 0.0
+
+            if self.spiral:
+
+                y = float(self.y.get()) + float(self.radius.get()) * math.sin((float(self.time_scale.get()) * self.t)/np.pi)
+                vy = float(self.time_scale.get()) * float(self.radius.get()) * math.cos((float(self.time_scale.get()) * self.t)/np.pi) / np.pi
 
         elif self.plane.get() == 1:
 
@@ -212,19 +204,29 @@ class PoseGen(Node):
             z = float(self.z.get()) + float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
             x = float(self.x.get())
 
-            vy = -  float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
-            vz =    float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
+            vy = - float(self.time_scale.get()) * float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
+            vz =   float(self.time_scale.get()) * float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             vx = 0.0
+
+            if self.spiral:
+
+                x = float(self.x.get()) + float(self.radius.get()) * math.sin((float(self.time_scale.get()) * self.t)/np.pi)
+                vx = float(self.time_scale.get()) * float(self.radius.get()) * math.cos((float(self.time_scale.get()) * self.t)/np.pi) / np.pi
 
         elif self.plane.get() == 2:
 
             x = float(self.x.get()) + float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             y = float(self.y.get()) + float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
-            z = float(self.z.get())
+            z = float(self.z.get())            
 
-            vx = - float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
-            vy = float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
+            vx = - float(self.time_scale.get()) *float(self.radius.get()) * math.sin(float(self.time_scale.get()) * self.t)
+            vy = float(self.time_scale.get()) * float(self.radius.get()) * math.cos(float(self.time_scale.get()) * self.t)
             vz = 0.0
+
+            if self.spiral.get():
+
+                z = float(self.z.get()) + float(self.radius.get()) * math.sin((float(self.time_scale.get()) * self.t)/np.pi)
+                vz = float(self.time_scale.get()) * float(self.radius.get()) * math.cos((float(self.time_scale.get()) * self.t)/np.pi) / np.pi
 
 
 
